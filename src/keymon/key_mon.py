@@ -110,7 +110,19 @@ class KeyMon:
         'CTRL': self.options.ctrl,
         'META': self.options.meta,
         'ALT': self.options.alt,
+        'KEYS': self.options.keys,
+        'BUTTONS': self.options.buttons,
     }
+    
+    #Disables all Buttons when nobuttons has been triggered
+    if not self.enabled['BUTTONS']:
+      self.enabled['SHIFT'] = False
+      self.enabled['META'] = False
+      self.enabled['ALT'] = False
+      self.enabled['CTRL'] = False
+      self.enabled['KEYS'] = False
+
+    
     self.modmap = mod_mapper.safely_read_mod_map(self.options.kbd_file)
 
     self.name_fnames = self.create_names_to_fnames()
@@ -328,16 +340,16 @@ class KeyMon:
         self.pixbufs, 'META_EMPTY', self.enabled['META'])
     self.alt_image = two_state_image.TwoStateImage(
         self.pixbufs, 'ALT_EMPTY', self.enabled['ALT'])
+    self.key_image = two_state_image.TwoStateImage(
+        self.pixbufs, 'KEY_EMPTY', self.enabled['KEYS'])
     self.create_buttons()
 
   def create_buttons(self):
-    self.buttons = [self.mouse_image, self.shift_image, self.ctrl_image,
+    self.buttons = [self.key_image, self.mouse_image, self.shift_image, self.ctrl_image,
         self.meta_image, self.alt_image]
     for _ in range(self.options.old_keys):
       key_image = two_state_image.TwoStateImage(self.pixbufs, 'KEY_EMPTY')
       self.buttons.append(key_image)
-    self.key_image = two_state_image.TwoStateImage(self.pixbufs, 'KEY_EMPTY')
-    self.buttons.append(self.key_image)
     for but in self.buttons:
       but.timeout_secs = self.options.fade_timeout
 
@@ -349,36 +361,50 @@ class KeyMon:
     self.hbox.pack_start(self.mouse_image, False, False, 0)
     if not self.enabled['MOUSE']:
       self.mouse_image.hide()
+      
+    #Checks if Buttons are enabled at all
+    if self.enabled['BUTTONS']:
 
-    if not self.enabled['SHIFT']:
+      if not self.enabled['SHIFT']:
+        self.shift_image.hide()
+      self.hbox.pack_start(self.shift_image, False, False, 0)
+
+      if not self.enabled['CTRL']:
+        self.ctrl_image.hide()
+      self.hbox.pack_start(self.ctrl_image, False, False, 0)
+
+      if not self.enabled['META']:
+        self.meta_image.hide()
+      self.hbox.pack_start(self.meta_image, False, False, 0)
+
+      if not self.enabled['ALT']:
+        self.alt_image.hide()
+      self.hbox.pack_start(self.alt_image, False, False, 0)
+
+      if not self.enabled['KEYS']:
+        self.key_image.hide()
+      self.hbox.pack_start(self.key_image, False, False, 0)
+
+      if self.enabled['KEYS']:
+        prev_key_image = None
+        for key_image in self.buttons[-(self.options.old_keys + 1):-1]:
+          key_image.hide()
+          #key_image.timeout_secs = 0.5
+          key_image.defer_to = prev_key_image
+          self.hbox.pack_start(key_image, True, True, 0)
+          prev_key_image = key_image
+
+    else:
       self.shift_image.hide()
-    self.hbox.pack_start(self.shift_image, False, False, 0)
-
-    if not self.enabled['CTRL']:
+      self.hbox.pack_start(self.shift_image, False, False, 0)
       self.ctrl_image.hide()
-    self.hbox.pack_start(self.ctrl_image, False, False, 0)
-
-    if not self.enabled['META']:
+      self.hbox.pack_start(self.ctrl_image, False, False, 0)
       self.meta_image.hide()
-    self.hbox.pack_start(self.meta_image, False, False, 0)
-
-    if not self.enabled['ALT']:
+      self.hbox.pack_start(self.meta_image, False, False, 0)
       self.alt_image.hide()
-    self.hbox.pack_start(self.alt_image, False, False, 0)
-
-    prev_key_image = None
-    for key_image in self.buttons[-(self.options.old_keys + 1):-1]:
-      key_image.hide()
-      #key_image.timeout_secs = 0.5
-      key_image.defer_to = prev_key_image
-      self.hbox.pack_start(key_image, True, True, 0)
-      prev_key_image = key_image
-
-    # This must be after the loop above.
-    #self.key_image.timeout_secs = 0.5
-
-    self.key_image.defer_to = prev_key_image
-    self.hbox.pack_start(self.key_image, True, True, 0)
+      self.hbox.pack_start(self.alt_image, False, False, 0)
+      self.key_image.hide()
+      self.hbox.pack_start(self.key_image, False, False, 0)
 
   def svg_name(self, fname):
     """Return an svg filename given the theme, system."""
@@ -491,11 +517,12 @@ class KeyMon:
       self.shift_image.reset_time_if_pressed()
       self.ctrl_image.reset_time_if_pressed()
       self.meta_image.reset_time_if_pressed()
+      self.key_image.reset_time_if_pressed()
       image.switch_to_default()
       self.update_shape_mask()
 
   def is_shift_code(self, code):
-    if code in ('SHIFT', 'ALT', 'CTRL', 'META'):
+    if code in ('SHIFT', 'ALT', 'CTRL', 'META', 'KEYS'):
       return True
     return False
 
@@ -510,7 +537,7 @@ class KeyMon:
       medium_name = short_name
     logging.debug('Scan code %s, Key %s pressed = %r', scan_code,
                                                        code, medium_name)
-    if code in self.name_fnames:
+    if code in self.name_fnames and self.enabled['KEYS']:
       self._handle_event(self.key_image, code, value)
       return
     if code.startswith('KEY_SHIFT'):
@@ -529,7 +556,7 @@ class KeyMon:
       if self.enabled['META']:
         self._handle_event(self.meta_image, 'META', value)
       return
-    if code.startswith('KEY_KP'):
+    if code.startswith('KEY_KP') and self.enabled['KEYS']:
       letter = medium_name
       if code not in self.name_fnames:
         template = 'one-char-numpad-template'
@@ -538,7 +565,7 @@ class KeyMon:
       self._handle_event(self.key_image, code, value)
       return
 
-    if code.startswith('KEY_'):
+    if code.startswith('KEY_') and self.enabled['KEYS']:
       letter = medium_name
       if code not in self.name_fnames:
         logging.debug('code not in %s', code)
@@ -659,6 +686,8 @@ class KeyMon:
         self.options.ctrl)
     self._toggle_a_key(self.alt_image, 'ALT',
         self.options.alt)
+    self._toggle_a_key(self.key_image, 'KEYS',
+        self.options.keys)
     self.create_buttons()
     self.layout_boxes()
     self.mouse_indicator_win.hide()
@@ -709,11 +738,17 @@ def create_options():
                   help=_('Make the dialog 25% larger than normal.'))
   opts.add_option(opt_short='-m', opt_long='--meta', dest='meta', type='bool',
                   ini_group='buttons', ini_name='meta',
-                  default=False,
+                  default=True,
                   help=_('Show the meta (windows) key.'))
-  opts.add_option(opt_long='--mouse', dest='mouse', type='bool', default=True,
+  opts.add_option(opt_short='-c', opt_long='--mouse', dest='mouse', type='bool', default=True,
                   ini_group='buttons', ini_name='mouse',
                   help=_('Show the mouse.'))
+  opts.add_option(opt_short='-b', opt_long='--buttons', dest='buttons', type='bool', default=True,
+                  ini_group='buttons', ini_name='buttons',
+                  help=_('Show keys at all.'))
+  opts.add_option(opt_long='--keys', dest='keys', type='bool', default=True,
+                  ini_group='buttons', ini_name='keys',
+                  help=_('Show keys.'))
   opts.add_option(opt_long='--shift', dest='shift', type='bool', default=True,
                   ini_group='buttons', ini_name='shift',
                   help=_('Show shift key.'))
@@ -738,7 +773,7 @@ def create_options():
                   help=_('Show decoration'))
   opts.add_option(opt_long='--backgroundless', dest='backgroundless', type='bool',
                   ini_group='ui', ini_name='backgroundless',
-                  default=False,
+                  default=True,
                   help=_('Show only buttons'))
   opts.add_option(opt_long='--only_combo', dest='only_combo', type='bool',
                   ini_group='ui', ini_name='only_combo',
@@ -765,6 +800,7 @@ def create_options():
                   help=_('Show version information and exit.'))
   opts.add_option(opt_short='-t', opt_long='--theme', dest='theme', type='str',
                   ini_group='ui', ini_name='theme', default='classic',
+                  ini_group='ui', ini_name='theme', default='modern2',
                   help=_('The theme to use when drawing status images (ex. "-t apple").'))
   opts.add_option(opt_long='--list-themes', dest='list_themes', type='bool',
                   help=_('List available themes'))

@@ -158,6 +158,11 @@ class MiscFrame(CommonFrame):
     """Create the box's layout."""
     vbox = gtk.VBox()
     self._add_check(
+        vbox,
+        _('_Buttons'),
+        _('Show keys at all when pressed.'),
+        'buttons')
+    self._add_check(
         vbox, 
         _('Swap left-right mouse buttons'),
         _('Swap the left and the right mouse buttons'),
@@ -230,6 +235,11 @@ class ButtonsFrame(CommonFrame):
         _('_Mouse'),
         _('Show the mouse.'),
         'mouse')
+    self._add_check(
+        vbox,
+        _('_Keys'),
+        _('Show the keys when pressed.'),
+        'keys')
     self._add_check(
         vbox,
         _('_Shift'),
