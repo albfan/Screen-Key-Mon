@@ -1,28 +1,26 @@
 #!/usr/bin/python
 #
-# Copyright (c) 2011 derRaphael <screenKeyMon@itholic.org>
+# Copyright 2010 Google Inc.
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-# GNU General Public License for more details.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>.
-#
- 
-"""Screen Keyboard Monitor.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""Keyboard Status Monitor.
 Monitors one or more keyboards and mouses.
 Shows their status graphically.
 """
 
-__author__ = 'derRaphael (screenKeyMon@itholic.org)'
-__version__ = '0.1'
+__author__ = 'Scott Kirkwood (scott+keymon@forusers.com)'
+__version__ = '1.7'
 
 import logging
 import pygtk
@@ -48,7 +46,7 @@ import two_state_image
 
 from ConfigParser import SafeConfigParser
 
-gettext.install('screen-key-mon', 'locale')
+gettext.install('key-mon', 'locale')
 
 def fix_svg_key_closure(fname, from_tos):
   """Create a closure to modify the key.
@@ -71,11 +69,11 @@ def fix_svg_key_closure(fname, from_tos):
   return fix_svg_key
 
 
-class ScreenKeyMon:
-  """main ScreenKeyMon window class."""
+class KeyMon:
+  """main KeyMon window class."""
 
   def __init__(self, options):
-    """Create the Screen Key Mon window.
+    """Create the Key Mon window.
     Options dict:
       scale: float 1.0 is default which means normal size.
       meta: boolean show the meta (windows key)
@@ -261,8 +259,9 @@ class ScreenKeyMon:
   def create_window(self):
     """Create the main window."""
     self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+    self.window.set_resizable(False)
 
-    self.window.set_title('Screen Keyboard Monitor')
+    self.window.set_title('Keyboard Status Monitor')
     width, height = 30 * self.options.scale, 48 * self.options.scale
     self.window.set_default_size(int(width), int(height))
     self.window.set_decorated(self.options.decorated)
@@ -725,7 +724,7 @@ class ScreenKeyMon:
 
 def show_version():
   """Show the version number and author, used by help2man."""
-  print _('Screen-Key-Mon version %s.') % __version__
+  print _('Keymon version %s.') % __version__
   print _('Written by %s') % __author__
 
 def create_options():
@@ -737,7 +736,9 @@ def create_options():
   opts.add_option(opt_short='-l', opt_long='--larger', dest='larger', default=False,
                   type='bool',
                   help=_('Make the dialog 25% larger than normal.'))
-  opts.add_option(opt_short='-m', opt_long='--meta', dest='meta', type='bool', default=True,
+  opts.add_option(opt_short='-m', opt_long='--meta', dest='meta', type='bool',
+                  ini_group='buttons', ini_name='meta',
+                  default=True,
                   help=_('Show the meta (windows) key.'))
   opts.add_option(opt_short='-c', opt_long='--mouse', dest='mouse', type='bool', default=True,
                   ini_group='buttons', ini_name='mouse',
@@ -798,6 +799,7 @@ def create_options():
   opts.add_option(opt_short='-v', opt_long='--version', dest='version', type='bool',
                   help=_('Show version information and exit.'))
   opts.add_option(opt_short='-t', opt_long='--theme', dest='theme', type='str',
+                  ini_group='ui', ini_name='theme', default='classic',
                   ini_group='ui', ini_name='theme', default='modern2',
                   help=_('The theme to use when drawing status images (ex. "-t apple").'))
   opts.add_option(opt_long='--list-themes', dest='list_themes', type='bool',
@@ -834,7 +836,7 @@ def create_options():
 def main():
   """Run the program."""
   opts = create_options()
-  opts.read_ini_file('~/.config/screen-key-mon/config')
+  opts.read_ini_file('~/.config/key-mon/config')
   desc = _('Usage: %prog [Options...]')
   opts.parse_args(desc)
 
@@ -877,11 +879,11 @@ def main():
     print _('Resetting to defaults.')
     opts.reset_to_defaults()
     opts.save()
-  screenkeymon = ScreenKeyMon(opts)
+  keymon = KeyMon(opts)
   try:
     gtk.main()
   except KeyboardInterrupt:
-    screenkeymon.quit_program()
+    keymon.quit_program()
 
 if __name__ == '__main__':
   #import cProfile
